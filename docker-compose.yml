@@ -1,0 +1,140 @@
+version: "3.7"
+
+volumes:
+  appdata:
+     driver_opts:
+           type: none
+           device: ${PWD}/volumes/magento
+           o: bind
+  dbdata:
+     driver_opts:
+           type: none
+           device: ${PWD}/volumes/db
+           o: bind
+  shared-pub-media:
+     driver_opts:
+           type: none
+           device: /srv/bebo-prod-shared/pub/media
+           o: bind
+  shared-var-backups:
+     driver_opts:
+           type: none
+           device: /srv/bebo-prod-shared/var/backups
+           o: bind
+
+services:
+  varnish:
+    image: meanbee/magento2-varnish:latest
+    restart: unless-stopped
+    env_file:
+     - ./magento.env
+    ports:
+      - 8001:80
+    links:
+      - web
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "10m"
+
+  web:
+    image: meanbee/magento2-nginx:1.9
+    restart: unless-stopped
+    ports:
+      - 80
+    links:
+      - fpm
+      - db
+    volumes:
+      - ./volumes/nginx-vhosts:/etc/nginx/conf.d
+      - appdata:/var/www/magento
+      - shared-pub-media:/var/www/magento/pub/media
+      - shared-var-backups:/var/www/magento/var/backups
+    env_file:
+      - ./magento.env
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "10m"
+  fpm:
+    hostname: fpm.magento2.docker
+    image: meanbee/magento2-php:${PHPVER}-fpm
+    restart: unless-stopped
+    ports:
+      - 9000
+    links:
+      - db
+    volumes:
+      - appdata:/var/www/magento
+      - shared-pub-media:/var/www/magento/pub/media
+      - shared-var-backups:/var/www/magento/var/backups
+      - ./volumes/sendmail/sendmail.cf:/etc/mail/sendmail.cf
+      - ./volumes/php/zz-mail.ini:/usr/local/etc/php/conf.d/zz-mail.ini
+    env_file:
+      - ./magento.env
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "10"
+            max-size: "10m"
+  db:
+    image: mariadb:10
+    restart: unless-stopped
+    ports:
+      - 3306
+    volumes:
+      - dbdata:/var/lib/mysql
+    env_file:
+      - ./magento.env
+    environment:
+      - TERM=meh
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "5"
+            max-size: "10m"
+  cli:
+    hostname: cli.magento2.docker
+    image: meanbee/magento2-php:${PHPVER}-cli
+#    restart: unless-stopped
+    links:
+      - db
+    volumes:
+      - ~/.composer/cache:/root/.composer/cache
+      - ./volumes/bash_profile:/root/.bash_profile
+      - appdata:/var/www/magento
+      - shared-pub-media:/var/www/magento/pub/media
+      - shared-var-backups:/var/www/magento/var/backups
+      - ./volumes/sendmail/sendmail.cf:/etc/mail/sendmail.cf
+    env_file:
+      - ./magento.env
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "5"
+            max-size: "10m"
+
+  cron:
+    image: meanbee/magento2-php:${PHPVER}-cli
+    restart: unless-stopped
+    hostname: magento2-cron.docker
+    command: run-cron
+    env_file:
+      - ./magento.env
+    environment:
+      - ENABLE_SENDMAIL=true
+    volumes:
+      - appdata:/var/www/magento
+      - shared-pub-media:/var/www/magento/pub/media
+      - shared-var-backups:/var/www/magento/var/backups
+      - ./volumes/sendmail/sendmail.cf:/etc/mail/sendmail.cf
+    links:
+      - db
+    logging:
+        driver: "json-file"
+        options:
+            max-file: "5"
+            max-size: "10m"
+

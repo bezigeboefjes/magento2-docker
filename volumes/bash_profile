@@ -1,0 +1,2 @@
+alias magento='/usr/local/bin/magento-command'
+alias magento-refresh='rm -rf /var/www/magento/pub/static/* /var/www/magento/var/cache/* /var/www/magento/var/page_cache/* /var/www/magento/var/generation/* /var/www/magento/var/di/* /var/www/magento/var/view_preprocessed/*; magento setup:upgrade; magento setup:di:compile; magento setup:static-content:deploy en_US; magento setup:static-content:deploy nl_NL; magento setup:static-content:deploy nl_BE; magento maintenance:disable; magento indexer:reindex; magento cache:enable; magento cache:flush; magento cache:clean'
