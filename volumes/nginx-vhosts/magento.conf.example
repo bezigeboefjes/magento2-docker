@@ -1,0 +1,45 @@
+upstream fastcgi_backend {
+  server fpm:9000; # Variables: FPM_HOST and FPM_PORT
+}
+
+server {
+    listen 80;
+    listen 443 ssl;
+
+    server_name localhost;
+
+    set $MAGE_ROOT /var/www/magento; # Variable: MAGENTO_ROOT
+    set $MAGE_MODE production; # Variable: MAGENTO_RUN_MODE
+    set $MAGE_RUN_TYPE store;
+
+# bezigeboefjes
+   if ($http_x_forwarded_host = "www.example.com") {
+        set $MAGE_RUN_CODE examplecom;
+    }
+
+
+    # Support for SSL termination.
+    set $my_http "http";
+    set $my_ssl "off";
+    set $my_port "80";
+    if ($http_x_forwarded_proto = "https") {
+        set $my_http "https";
+        set $my_ssl "on";
+        set $my_port "443";
+    }
+
+    ssl_certificate /etc/nginx/ssl/magento.crt;
+    ssl_certificate_key /etc/nginx/ssl/magento.key;
+
+    root $MAGE_ROOT/pub;
+
+    index index.php;
+    autoindex off;
+    charset UTF-8;
+    client_max_body_size 64M; # Variable: UPLOAD_MAX_FILESIZE
+    error_page 404 403 = /errors/404.php;
+    #add_header "X-UA-Compatible" "IE=Edge";
+
+    include /etc/nginx/conf.d/location.inc;
+
+}
