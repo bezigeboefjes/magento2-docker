@@ -24,7 +24,7 @@ volumes:
 
 services:
   varnish:
-    image: meanbee/magento2-varnish:latest
+    image: bezigeboefjes/magento2-varnish:latest
     restart: unless-stopped
     env_file:
      - ./magento.env
@@ -39,10 +39,11 @@ services:
             max-size: "10m"
 
   web:
-    image: meanbee/magento2-nginx:1.9
+#    image: meanbee/magento2-nginx:1.9
+    image: bezigeboefjes/magento2-nginx:1.9
     restart: unless-stopped
     ports:
-      - 80
+      - 10080
     links:
       - fpm
       - db
@@ -51,6 +52,7 @@ services:
       - appdata:/var/www/magento
       - shared-pub-media:/var/www/magento/pub/media
       - shared-var-backups:/var/www/magento/var/backups
+      - ./sock:/sock
     env_file:
       - ./magento.env
     logging:
@@ -60,10 +62,11 @@ services:
             max-size: "10m"
   fpm:
     hostname: fpm.magento2.docker
-    image: meanbee/magento2-php:${PHPVER}-fpm
+#    image: meanbee/magento2-php:${PHPVER}-fpm
+    image: bezigeboefjes/magento2-php:${PHPVER}-fpm
     restart: unless-stopped
-    ports:
-      - 9000
+#    ports:
+#      - 9000
     links:
       - db
     volumes:
@@ -72,6 +75,7 @@ services:
       - shared-var-backups:/var/www/magento/var/backups
       - ./volumes/sendmail/sendmail.cf:/etc/mail/sendmail.cf
       - ./volumes/php/zz-mail.ini:/usr/local/etc/php/conf.d/zz-mail.ini
+      - ./sock:/sock
     env_file:
       - ./magento.env
     logging:
